@@ -1,6 +1,3 @@
-import {derived, Readable, Writable, writable} from "svelte/store";
-import type {Subscriber, Unsubscriber} from "svelte/types/runtime/store";
-import type {BaseStore} from "./BaseStore";
 import {Board} from "../types/Board";
 import {BaseObjectStore} from "./BaseObjectStore";
 
@@ -64,7 +61,7 @@ class Boards extends BaseObjectStore<StoredBoards> {
 
     update(board: Board) {
         this.objects.update(v => {
-            v.targetBoards = v.targetBoards.map (b => (b.id != board.id) ? b : board)
+            v.targetBoards = v.targetBoards.map(b => (b.id != board.id) ? b : board)
             return v
         })
     }

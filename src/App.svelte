@@ -1,4 +1,3 @@
-
 <script lang="ts">
     import {theme} from './stores/Theme'
     import InputPanel from "./components/InputPanel.svelte";
@@ -29,8 +28,8 @@
     </button>
 
     <Container>
-            <InputPanel></InputPanel>
-            <Result></Result>
+        <InputPanel></InputPanel>
+        <Result></Result>
     </Container>
 </main>
 

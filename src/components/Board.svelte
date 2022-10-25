@@ -1,9 +1,8 @@
 <script lang="ts">
     import {Board} from "../types/Board";
-    import {afterUpdate, beforeUpdate} from "svelte";
     import {boards} from "../stores/Boards";
 
-    export let id: number
+    export let id: number = -2
 
     let board: Board = boards.get(id)
 

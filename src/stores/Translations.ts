@@ -1,13 +1,10 @@
 import {derived, Writable, writable} from "svelte/store";
-import type {BaseStore} from "./BaseStore";
-import type {Readable, Subscriber} from "svelte/types/runtime/store";
-import {Board} from "../types/Board";
+import type {Readable} from "svelte/types/runtime/store";
 import {BaseObjectStore} from "./BaseObjectStore";
 import translation_texts from "../data/translations";
 
 let LANG_KEY: string = "locale"
 let DEFAULT_LOCALE: string = "en"
-
 
 
 class Translations extends BaseObjectStore<Map<Locale, Map<TranslationKey, string>>> {
@@ -31,7 +28,7 @@ class Translations extends BaseObjectStore<Map<Locale, Map<TranslationKey, strin
         return true
     }
 
-    get translate(): Readable<(key: TranslationKey, vars: object | null ) => string> {
+    get translate(): Readable<(key: TranslationKey, vars: object | null) => string> {
         return derived(this.locale, ($locale) => (key: TranslationKey, vars: object | null = null) => this.internal_translate($locale, key, vars || {}));
     }
 

@@ -4,7 +4,7 @@ export class Board {
     public height: number
     public amount: number
 
-    constructor(id = null, width = null , height = null) {
+    constructor(id = null, width = null, height = null) {
         this.id = id
         this.width = width
         this.height = height
@@ -12,7 +12,7 @@ export class Board {
     }
 
     get name(): string {
-        return "Board " + (this.id )
+        return "Board " + (this.id)
     }
 
     get dimensions(): string {

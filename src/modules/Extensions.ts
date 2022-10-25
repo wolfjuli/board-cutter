@@ -1,9 +1,8 @@
-
 let debugEnabled: boolean = true
 
 
 export function logDebug(...obj: any) {
-    if(debugEnabled)
+    if (debugEnabled)
         console.log(...obj)
 }
 
