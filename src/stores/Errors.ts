@@ -1,4 +1,5 @@
 import {BaseVolatileStore} from "./BaseVolatileStore";
+import {logDebug, logError} from "../modules/Extensions";
 
 class Error {
 
@@ -30,7 +31,10 @@ class Errors extends BaseVolatileStore<Error[]> {
 
             if (idx > -1)
                 v.splice(idx, 1)
+            else
+                logError("error not in list:", error)
 
+            logDebug("removed error", idx, error)
             return v
         })
     }

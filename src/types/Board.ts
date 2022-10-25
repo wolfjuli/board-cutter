@@ -16,7 +16,6 @@ export class Board {
     }
 
     get dimensions(): string {
-        console.log("asdf")
         return this.width + " X " + this.height
     }
 }

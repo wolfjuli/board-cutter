@@ -6,7 +6,7 @@
     import {errors} from "../stores/Errors";
 
     let tr = translations.translate
-    let t : (key: string, vars: (object | null) = null) => string = $tr
+    let t: (key: string, vars: (object | null) = null) => string = $tr
 
     let baseBoard: Board
     let targetBoards: Board[]
@@ -14,7 +14,6 @@
     boards.subscribe(b => {
         baseBoard = b.baseBoard
         targetBoards = b.targetBoards
-        console.log(targetBoards)
     })
 
     function normalizedSplit(str) {
@@ -59,28 +58,32 @@
 
 </script>
 
+<div class="d-flex flex-column flex-shrink-0 p-3" style="width: 280px;">
 
-<h2>Input</h2>
+    <div class="base-board">
+        <h3> Base Board</h3>
+        <input
+                placeholder={baseBoard.dimensions}
+                on:keydown={event => event.key === 'Enter'  && setBaseBoard(event.target)}
+                on:focusout={event => event.target.value ? setBaseBoard(event.target) : null}
+        />
+    </div>
+    <hr>
 
-<div class="base-board">
-    <h3> Base Board</h3>
-    <input
-            placeholder={baseBoard.dimensions}
-            on:keydown={event => (event.key === 'Enter' || event.key === 'Tab' ) && setBaseBoard(event.target)}
-            on:focusout={event => event.target.value ? setBaseBoard(event.target) : null}
-    />
+
+    <div class="target-boards">
+        <h3>Target Boards</h3>
+        <input
+                on:keydown="{event => event.key === 'Enter' && add(event.target)}"
+                on:focusout={event => event.target.value ? add(event.target) : null}
+                placeholder="width X height"
+        >
+        <button on:click={() => boards.clearAll()}>Clear all</button>
+
+        {#each targetBoards as board  }
+            <BoardUI {...board}/>
+        {/each}
+    </div>
+    <hr>
 </div>
 
-<div class="target-boards">
-    <h3>Target Boards</h3>
-    <input
-            on:keydown="{event => event.key === 'Enter' && add(event.target)}"
-            on:focusout={event => event.target.value ? add(event.target) : null}
-            placeholder="width X height"
-    >
-    <button on:click={() => boards.clearAll()}>Clear all</button>
-
-    {#each targetBoards as board  }
-        <BoardUI {...board}/>
-    {/each}
-</div>
