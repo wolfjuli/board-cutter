@@ -1,30 +1,63 @@
 import {BaseVolatileStore} from "./BaseVolatileStore";
 import {logDebug, logError} from "../modules/Extensions";
 
-class Error {
+export class Error {
 
-    constructor(public message: string, public readonly created: Date = new Date()) {
+    constructor(
+        public message: string,
+        public retention: number = -1,
+        public progress: number = 0,
+        public readonly created: Date = new Date()) {
     }
 }
 
 class Errors extends BaseVolatileStore<Error[]> {
+    private interval: NodeJS.Timer
+
     constructor() {
         super([]);
+
+
+        this.interval = setInterval(() => {
+            this.objects.update(v => {
+                    let now = new Date()
+
+                    return v.map((error) => {
+                        error.progress = Math.round((now - error.created) / error.retention * 100)
+                        return error
+                    }).filter((error) => error.progress < 100)
+                }
+            )
+        }, 100)
     }
 
-    public retention: number = 5000
+    public retention: number = 3000
 
     add(message: string, retention: number = this.retention) {
-        let error = new Error(message)
+        let error = new Error(message, retention)
         this.objects.update(v => {
             v.push(error);
             return v
         })
-        setTimeout(() => {
-            this.remove(error)
-        }, retention)
+
     }
 
+    // noinspection JSUnusedLocalSymbols
+    private update(error: Error) {
+        this.objects.update(v => {
+            let idx = v.indexOf(error)
+
+            if (idx > -1)
+                v[idx] = error
+            else
+                logError("error not in list:", error)
+
+            logDebug("updated error", idx, error)
+            return v
+        })
+    }
+
+    // noinspection JSUnusedLocalSymbols
     private remove(error: Error) {
         this.objects.update(v => {
             let idx = v.indexOf(error)

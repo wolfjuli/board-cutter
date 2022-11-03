@@ -10,7 +10,12 @@ export abstract class BaseObjectStore<T> extends BaseStore<T> {
         super(key, new baseType())
 
         let stored = localStorage.getItem(key)
-        let parsed = stored ? this.objectAssign(JSON.parse(stored)) : new baseType()
+        let parsed = new baseType()
+
+        try {
+            parsed = stored ? this.objectAssign(JSON.parse(stored)) : new baseType()
+        } catch (e) {
+        }
 
         this.objects = writable(parsed)
         this.objects.subscribe(v => {

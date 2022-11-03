@@ -1,12 +1,5 @@
-<div class="container">
-    <slot></slot>
+<div class="container-fluid">
+    <div class="row">
+        <slot></slot>
+    </div>
 </div>
-
-<style>
-    .container {
-        display: block;
-        clear: both;
-        position: absolute;
-        box-sizing: border-box;
-    }
-</style>

@@ -58,32 +58,52 @@
 
 </script>
 
-<div class="d-flex flex-column flex-shrink-0 p-3" style="width: 280px;">
 
-    <div class="base-board">
-        <h3> Base Board</h3>
-        <input
-                placeholder={baseBoard.dimensions}
-                on:keydown={event => event.key === 'Enter'  && setBaseBoard(event.target)}
-                on:focusout={event => event.target.value ? setBaseBoard(event.target) : null}
-        />
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" style="">
+    <div class="position-sticky pt-3 sidebar-sticky">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <div class="base-board">
+                    <h3> Base Board</h3>
+                    <input
+                            placeholder={baseBoard.dimensions}
+                            on:keydown={event => event.key === 'Enter'  && setBaseBoard(event.target)}
+                            on:focusout={event => event.target.value ? setBaseBoard(event.target) : null}
+                    />
+                </div>
+            </li>
+            <li>
+                <hr>
+            </li>
+            <li class="nav-item">
+                <div class="target-boards">
+                    <h3> <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                              class="feather feather-layers align-text-bottom" aria-hidden="true">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg> Target Boards</h3>
+                    <div class="input-group mb-3" >
+                        <input
+                                class="form-control"
+                                on:keydown="{event => event.key === 'Enter' && add(event.target)}"
+                                on:focusout={event => event.target.value ? add(event.target) : null}
+                                placeholder="width X height"
+                        >
+                        <div class="input-group-append">
+                            <button on:click={() => boards.clearAll()} class="btn btn-outline-secondary" type="button">
+                                Clear all
+                            </button>
+                        </div>
+                    </div>
+                    {#each targetBoards as board  }
+                        <BoardUI {...board}/>
+                    {/each}
+                </div>
+            </li>
+
+        </ul>
     </div>
-    <hr>
-
-
-    <div class="target-boards">
-        <h3>Target Boards</h3>
-        <input
-                on:keydown="{event => event.key === 'Enter' && add(event.target)}"
-                on:focusout={event => event.target.value ? add(event.target) : null}
-                placeholder="width X height"
-        >
-        <button on:click={() => boards.clearAll()}>Clear all</button>
-
-        {#each targetBoards as board  }
-            <BoardUI {...board}/>
-        {/each}
-    </div>
-    <hr>
-</div>
+</nav>
 

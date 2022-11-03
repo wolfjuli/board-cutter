@@ -1,7 +1,7 @@
 <script lang="ts">
     import {theme} from './stores/Theme'
     import InputPanel from "./components/InputPanel.svelte";
-    import Result from "./components/Overview.svelte";
+    import Dashboard from "./components/Dashboard.svelte";
     import Container from "./components/base/Container.svelte";
     import Errors from "./components/Errors.svelte";
 
@@ -16,20 +16,13 @@
 
 <main>
 
-    <Errors></Errors>
-    <h1>Board Cutter</h1>
-
-
-    <button on:click={() => theme.useLight()}>
-        Light
-    </button>
-    <button on:click={() => theme.useDark()}>
-        Dark
-    </button>
 
     <Container>
         <InputPanel></InputPanel>
-        <Result></Result>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <Errors></Errors>
+            <Dashboard></Dashboard>
+        </main>
     </Container>
 </main>
 

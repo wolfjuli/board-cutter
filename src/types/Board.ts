@@ -15,6 +15,10 @@ export class Board {
         return "Board " + (this.id)
     }
 
+    get shortName(): string {
+        return '' + this.id
+    }
+
     get dimensions(): string {
         return this.width + " X " + this.height
     }
