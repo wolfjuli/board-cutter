@@ -23,7 +23,7 @@ class Errors extends BaseVolatileStore<Error[]> {
                     let now = new Date()
 
                     return v.map((error) => {
-                        error.progress = Math.round((now - error.created) / error.retention * 100)
+                        error.progress = Math.round((now.getTime() - error.created.getTime()) / error.retention * 100)
                         return error
                     }).filter((error) => error.progress < 100)
                 }

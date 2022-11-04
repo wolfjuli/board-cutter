@@ -6,7 +6,7 @@ class StoredBoards {
     public targetBoards: Board[] = Array()
 
     constructor() {
-        this.baseBoard = new Board(-1, 0, 0)
+        this.baseBoard = new Board(0, 0, -1)
     }
 }
 
@@ -40,7 +40,7 @@ class Boards extends BaseObjectStore<StoredBoards> {
     add(width: number, height: number) {
         this.objects.update(v => {
             v.targetBoards.push(
-                new Board(this.nextId(v.targetBoards), width, height)
+                new Board(width, height, this.nextId(v.targetBoards))
             );
             return v
         })
