@@ -19,7 +19,9 @@ import {logDebug, logError} from "./Extensions";
  * Then calculate score
  */
 
-class Solution {
+export class Solution {
+
+    public score: number = -1
 
     constructor(
         public fittedBoards: Board[] = [],
@@ -49,48 +51,93 @@ class Solution {
     }
 }
 
+export class SolverConfiguration {
+    constructor(
+        public rotationAllowed: Boolean = true
+    ) {
+
+    }
+
+}
+
 export class Solver {
 
-    public solutions = []
+    public solutions: Solution[] = []
 
-    constructor(baseBoard: Board, targetBoards: Board[]) {
-        if (targetBoards.length > 0)
+
+    constructor(baseBoard: Board, targetBoards: Board[], public configuration: SolverConfiguration = new SolverConfiguration()) {
+        if (targetBoards.length > 0) {
             this.solutions = this.solve(baseBoard, targetBoards)
-        else
+        } else
             logDebug("targetBoards is empty")
     }
 
     private solve(baseBoard: Board, targetBoards: Board[]): Solution[] {
 
-        logDebug("Start solving:", baseBoard, targetBoards)
+        let allTargetBoards: Board[] = targetBoards.map(b => {
+            return Array.from({length: b.amount}, () => b.copy())
+        }).flat()
+
         let allSolutions: Solution[] = []
         let partialSolutions: Solution[] = [new Solution(
             [],
             [baseBoard],
-            [...targetBoards]
+            allTargetBoards
         )]
 
+        logDebug("Start solving:", partialSolutions)
 
-        let counter = 0
-        while (partialSolutions.length > 0) {
-            allSolutions.push(...partialSolutions)
-            partialSolutions = partialSolutions.map(solution => {
-                return targetBoards.map((b) => {
-                    return this.partialSolve(solution, b.id)
+        try {
+            let counter = 0
+            while (partialSolutions.length > 0) {
+                allSolutions.push(...partialSolutions)
+                partialSolutions = partialSolutions.map(solution => {
+                    return solution.nonFittedBoards.map((b) => {
+                        return this.partialSolve(solution, b.id)
+                    }).flat()
                 }).flat()
 
-            }).flat()
-
-            if (counter++ > 20) {
-                logError("Too many steps")
-                return allSolutions.filter(s => parents.indexOf(s) == -1)
+                if (counter++ > 20) {
+                    logError("Too many steps")
+                    return allSolutions.filter(s => parents.indexOf(s) == -1)
+                }
             }
+        } catch (e) {
+            logError("Error during solving: ", e)
         }
 
-        logDebug(allSolutions)
         let parents = allSolutions.map(s => s.parentSolution)
-        return allSolutions.filter(s => parents.indexOf(s) == -1)
+        let result = allSolutions.filter(s => parents.indexOf(s) == -1)
 
+        this.scoreSolutions(result)
+
+        result = result.sort((a, b) => b.score - a.score)
+        logDebug("Solutions", result)
+        return result
+    }
+
+    /***
+     * FScores a solution:
+     * Amount of rest: * -1 (better few big boards than a lot of small ones)
+     * Area of the biggest rest: * 10
+     * Longest length of rest: *1
+     * Every rotation: * -1
+     * Not fitting boards: area * -10
+     *
+     * @param solutions
+     * @private
+     */
+    private scoreSolutions(solutions: Solution[]) {
+        solutions.forEach(s => {
+            let biggest = s.restBoards.sort((a, b) => b.area - a.area)[0]
+            let longest = s.restBoards.sort((a, b) => b.longestSide - a.longestSide)[0]
+            s.score =
+                s.restBoards.length * -1 +
+                biggest.area * 10 +
+                longest.longestSide +
+                s.fittedBoards.reduce((acc, curr) => acc - (curr.rotated ? 1 : 0), 0) +
+                s.nonFittedBoards.reduce((acc, curr) => acc + curr.area * -10, 0)
+        })
     }
 
     /***
@@ -101,8 +148,8 @@ export class Solver {
      * @private
      */
     private partialSolve(solution: Solution, targetBoardId: number): Solution[] {
-        let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id == targetBoardId)
-        let newNonFitted = [...solution.nonFittedBoards]
+        let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id === targetBoardId)
+        let newNonFitted = [...solution.nonFittedBoards] //splice next line removes the board
         let targetBoard = newNonFitted.splice(targetBoardIdx, 1)[0] //works inplace, returns spliced
         newNonFitted.forEach(b => b.rotated = false)
 
@@ -115,10 +162,17 @@ export class Solver {
             let rTargetBoard = targetBoard.copy()
             rTargetBoard.rotated = !rTargetBoard.rotated
 
-            let widthWise = this.splitAlongWidth(baseBoard, targetBoard)
-            let heightWise = this.splitAlongHeight(baseBoard, targetBoard)
-            let rWidthWise = this.splitAlongWidth(baseBoard, rTargetBoard)
-            let rHeightWise = this.splitAlongHeight(baseBoard, rTargetBoard)
+            let rotate = this.configuration.rotationAllowed && targetBoard.width !== targetBoard.height
+
+            logDebug("BaseBoard", baseBoard)
+
+            targetBoard.x = baseBoard.x
+            targetBoard.y = baseBoard.y
+
+            let widthWise = this.splitWidthFirst(baseBoard, targetBoard)
+            let heightWise = this.splitHeightFirst(baseBoard, targetBoard)
+            let rWidthWise = rotate ? this.splitWidthFirst(baseBoard, rTargetBoard) : null
+            let rHeightWise = rotate ? this.splitHeightFirst(baseBoard, rTargetBoard) : null
 
             let res: Solution[] = []
             let newRest = [...solution.restBoards]
@@ -132,21 +186,23 @@ export class Solver {
 
             if (widthWise != null)
                 res.push(
-                    baseSolution.copy().appendRestBoards(...widthWise).appendFittedBoards(targetBoard)
+                    baseSolution.copy().appendRestBoards(...widthWise).appendFittedBoards(targetBoard.copy())
                 )
+
             if (heightWise != null)
                 res.push(
-                    baseSolution.copy().appendRestBoards(...heightWise).appendFittedBoards(targetBoard)
+                    baseSolution.copy().appendRestBoards(...heightWise).appendFittedBoards(targetBoard.copy())
                 )
             if (rWidthWise != null)
                 res.push(
-                    baseSolution.copy().appendRestBoards(...rWidthWise).appendFittedBoards(rTargetBoard)
+                    baseSolution.copy().appendRestBoards(...rWidthWise).appendFittedBoards(rTargetBoard.copy())
                 )
             if (rHeightWise != null)
                 res.push(
-                    baseSolution.copy().appendRestBoards(...rHeightWise).appendFittedBoards(rTargetBoard)
+                    baseSolution.copy().appendRestBoards(...rHeightWise).appendFittedBoards(rTargetBoard.copy())
                 )
 
+            logDebug("Calculated result", res)
             return res
         }).flat()
     }
@@ -161,7 +217,7 @@ export class Solver {
      * @param targetBoard The targetBoard, which defines the cut height
      * @private
      */
-    private splitAlongWidth(baseBoard: Board, targetBoard: Board): Board[] {
+    private splitWidthFirst(baseBoard: Board, targetBoard: Board): Board[] {
         let [tWidth, tHeight] = !targetBoard.rotated ? [targetBoard.width, targetBoard.height] : [targetBoard.height, targetBoard.width]
         let newHeight = baseBoard.height - tHeight
         let newWidth = baseBoard.width - tWidth
@@ -169,7 +225,7 @@ export class Solver {
         if (newWidth < 0 || newHeight < 0)
             return null
 
-        let rightBoard = new Board(newWidth, targetBoard.height)
+        let rightBoard = new Board(newWidth, tHeight)
         rightBoard.rightOf(targetBoard)
 
         let lowerBoard = new Board(baseBoard.width, newHeight)
@@ -188,15 +244,18 @@ export class Solver {
      * @param targetBoard The targetBoard, which defines the cut width
      * @private
      */
-    private splitAlongHeight(baseBoard: Board, targetBoard: Board): Board[] {
+    private splitHeightFirst(baseBoard: Board, targetBoard: Board): Board[] {
         let [tWidth, tHeight] = !targetBoard.rotated ? [targetBoard.width, targetBoard.height] : [targetBoard.height, targetBoard.width]
         let newHeight = baseBoard.height - tHeight
         let newWidth = baseBoard.width - tWidth
 
+        if (newWidth < 0 || newHeight < 0)
+            return null
+
         let rightBoard = new Board(newWidth, baseBoard.height)
         rightBoard.rightOf(targetBoard)
 
-        let lowerBoard = new Board(newWidth, newHeight)
+        let lowerBoard = new Board(tWidth, newHeight)
         lowerBoard.belowOf(targetBoard)
 
         return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)

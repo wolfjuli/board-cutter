@@ -29,8 +29,8 @@
             return
         }
 
-        let width = splitted[0]
-        let height = splitted[1]
+        let width = +splitted[0]
+        let height = +splitted[1]
 
         boards.add(width, height)
         input.value = ''
@@ -45,8 +45,8 @@
             return
         }
 
-        let width = splitted[0]
-        let height = splitted[1]
+        let width = +splitted[0]
+        let height = +splitted[1]
 
         boards.setBase(width, height)
         input.value = ''

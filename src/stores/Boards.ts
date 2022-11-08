@@ -28,6 +28,9 @@ class Boards extends BaseObjectStore<StoredBoards> {
         this.objects.update(v => {
             v.baseBoard.width = width
             v.baseBoard.height = height
+            v.baseBoard.x = 0
+            v.baseBoard.y = 0
+
             return v
         })
     }

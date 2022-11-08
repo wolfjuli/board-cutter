@@ -1,12 +1,17 @@
 <script lang="ts">
     import {boards} from "../stores/Boards";
-    import {Solver} from "../modules/Solver";
+    import {Solver, SolverConfiguration} from "../modules/Solver";
     import {logDebug} from "../modules/Extensions";
 
     let _boards
 
     let colors = []
-    let solver= null
+    let solver = null
+    let solutionIdx: number= 0
+
+    let previousAllowed = false
+    let nextAllowed = false
+
     boards.subscribe(b => {
         _boards = b
 
@@ -18,9 +23,31 @@
                     + Math.round(Math.random() * 255) + ')'
                 )
 
-        logDebug(_boards.targetBoards.length, ..._boards.targetBoards )
-        solver = new Solver(_boards.baseBoard, _boards.targetBoards)
+        logDebug(_boards.targetBoards.length, ..._boards.targetBoards)
+        solver = new Solver(_boards.baseBoard, _boards.targetBoards, new SolverConfiguration(false))
+
+        if(solver.solutions.length > 0 )
+            nextAllowed = true
     })
+
+    function nextSolution() {
+        if(++solutionIdx > solver.solutions.length - 1)
+            solutionIdx = solver.solutions.length - 1
+
+        checkPrevNext()
+    }
+
+    function prevSolution() {
+        if(--solutionIdx < 0)
+            solutionIdx = 0
+
+        checkPrevNext()
+    }
+
+    function checkPrevNext() {
+        previousAllowed = (solutionIdx > 0)
+        nextAllowed = (solutionIdx < solver.solutions.length - 1)
+    }
 </script>
 
 <div class="chartjs-size-monitor">
@@ -32,10 +59,10 @@
     </div>
 </div>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Results</h1>
+    <h1 class="h2">Solution {solutionIdx + 1}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary">Previous</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary {(!previousAllowed) ? "disabled" : ""}" on:click={() => prevSolution()}>Previous</button>
             <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -46,7 +73,7 @@
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary">Next</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary {(!nextAllowed) ? "disabled" : ""}" on:click={() => nextSolution()}>Next</button>
         </div>
     </div>
 </div>
@@ -54,11 +81,15 @@
 <svg viewBox="0 0 {_boards.baseBoard.width} {_boards.baseBoard.height}">
     <rect x="0" y="0" width="{_boards.baseBoard.width}" height="{_boards.baseBoard.height}" fill="none" stroke="black"
           stroke-width="2"></rect>
-    {#each _boards.targetBoards as board, i}
-        {#each Array(board.amount) as idx }
-            <rect x="0" y="0" width="{board.width}" height="{board.height}" fill="none" stroke="{colors[i]}"
+    {#each solver.solutions[solutionIdx].fittedBoards as board, i}
+            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="none"
+                  stroke="{colors[i]}"
                   stroke-width="1"></rect>
-        {/each}
+    {/each}
+    {#each solver.solutions[solutionIdx].restBoards as board, i}
+        <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
+              stroke="{colors[i]}"
+              stroke-width="1"></rect>
     {/each}
 </svg>
 
