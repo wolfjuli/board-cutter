@@ -1,27 +1,13 @@
 import {Board} from "../types/Board";
-import {logDebug, logError} from "./Extensions";
+import {logDebug, logError} from "../modules/Extensions";
+import {BaseScorer, Scorer} from "../modules/Scorer";
+import {BaseVolatileStore} from "./BaseVolatileStore";
 
-/***
- * Finds the best distribution/orientation of the targetBoards within the baseBoard, based on score:
- * Amount of rest: * -1 (better few big boards than a lot of small ones)
- * Area of the biggest rest: * 10
- * Longest length of rest: base.length - length
- * Every rotation: * -1
- * Not fitting boards: area * -10
- *
- * Idea: Place first board at 0 0, cut along width - results in 2 boards, cut the first board along height, repeat with
- * the 2 newly created rest boards. Repeat as long as there are missing targetBoards.
- *
- * Quit iteration, if:
- *  - Iteration has not changed the result (boards left over which doesn't fit
- *  - there are no targetBoards left
- *
- * Then calculate score
- */
 
 export class Solution {
 
     public score: number = -1
+    public finished: boolean = false
 
     constructor(
         public fittedBoards: Board[] = [],
@@ -53,90 +39,116 @@ export class Solution {
 
 export class SolverConfiguration {
     constructor(
-        public rotationAllowed: Boolean = true
+        public rotationAllowed: Boolean = true,
+        public intervalMs: number = 10
     ) {
 
     }
 
 }
 
-export class Solver {
+/***
+ * Finds the best distribution/orientation of the targetBoards within the baseBoard
+ *
+ * Idea: Place first board at 0 0, cut along width - results in 2 boards, cut the first board along height, repeat with
+ * the 2 newly created rest boards. Repeat as long as there are missing targetBoards.
+ *
+ * Quit iteration, if:
+ *  - Iteration has not changed the result (boards left over which doesn't fit
+ *  - there are no targetBoards left
+ *
+ * Then calculate score
+ */
 
-    public solutions: Solution[] = []
+export class SolverResult {
+    constructor(
+        public solutions: Solution[],
+        public configuration: SolverConfiguration,
+        public scorer: Scorer
+    ) {
+    }
+
+    get finishedSolutions(): Solution[] {
+        return this.solutions.filter(s => s.finished)
+    }
+
+}
+
+export class Solver extends BaseVolatileStore<SolverResult> {
+
+    public worker: NodeJS.Timer = null
+
+    public startSolver(
+        baseBoard: Board,
+        targetBoards: Board[],
+        configuration: SolverConfiguration = new SolverConfiguration(),
+        scorer: Scorer = new BaseScorer()) {
 
 
-    constructor(baseBoard: Board, targetBoards: Board[], public configuration: SolverConfiguration = new SolverConfiguration()) {
         if (targetBoards.length > 0) {
-            this.solutions = this.solve(baseBoard, targetBoards)
+            let allTargetBoards: Board[] = targetBoards.map(b => {
+                return Array.from({length: b.amount}, () => b.copy())
+            }).flat()
+
+            this.stop()
+
+            this.objects.update(() => new SolverResult(
+                    [new Solution([], [baseBoard], allTargetBoards)],
+                    configuration,
+                    scorer
+                )
+            )
+
+            logDebug("Start solving")
+
+            this.worker = setInterval(() => {
+                if (this.solveOne()) {
+                    clearInterval(this.worker)
+                    this.worker = null
+                }
+
+            }, configuration.intervalMs)
         } else
             logDebug("targetBoards is empty")
+
     }
 
-    private solve(baseBoard: Board, targetBoards: Board[]): Solution[] {
+    public stop() {
+        if (this.worker)
+            clearInterval(this.worker)
+    }
 
-        let allTargetBoards: Board[] = targetBoards.map(b => {
-            return Array.from({length: b.amount}, () => b.copy())
+    private solveOne(): Boolean {
+
+        let solverResult: SolverResult
+        this.objects.subscribe(v => solverResult = v)
+        let solutions = [...solverResult.solutions]
+
+        let solutionIdx = solutions.findIndex((s) => !s.finished)
+
+        if (solutionIdx == -1)
+            return true
+
+        let solution = solutions.splice(solutionIdx, 1)[0]
+
+        let newSolutions = solution.nonFittedBoards.map((b) => {
+            return this.partialSolve(solution, b.id, solverResult.configuration)
         }).flat()
 
-        let allSolutions: Solution[] = []
-        let partialSolutions: Solution[] = [new Solution(
-            [],
-            [baseBoard],
-            allTargetBoards
-        )]
-
-        logDebug("Start solving:", partialSolutions)
-
-        try {
-            let counter = 0
-            while (partialSolutions.length > 0) {
-                allSolutions.push(...partialSolutions)
-                partialSolutions = partialSolutions.map(solution => {
-                    return solution.nonFittedBoards.map((b) => {
-                        return this.partialSolve(solution, b.id)
-                    }).flat()
-                }).flat()
-
-                if (counter++ > 20) {
-                    logError("Too many steps")
-                    return allSolutions.filter(s => parents.indexOf(s) == -1)
-                }
-            }
-        } catch (e) {
-            logError("Error during solving: ", e)
+        if (newSolutions.length == 0) {
+            solution.finished = true
+            newSolutions = [solution]
         }
 
-        let parents = allSolutions.map(s => s.parentSolution)
-        let result = allSolutions.filter(s => parents.indexOf(s) == -1)
+        solutions = solverResult.scorer.scoreAndSort([
+            ...solutions.slice(0, solutionIdx),
+            ...newSolutions,
+            ...solutions.slice(solutionIdx + 1, solutions.length)
+        ])
 
-        this.scoreSolutions(result)
-
-        result = result.sort((a, b) => b.score - a.score)
-        logDebug("Solutions", result)
-        return result
-    }
-
-    /***
-     * FScores a solution:
-     * Amount of rest: * -1 (better few big boards than a lot of small ones)
-     * Area of the biggest rest: * 10
-     * Longest length of rest: *1
-     * Every rotation: * -1
-     * Not fitting boards: area * -10
-     *
-     * @param solutions
-     * @private
-     */
-    private scoreSolutions(solutions: Solution[]) {
-        solutions.forEach(s => {
-            let biggest = s.restBoards.sort((a, b) => b.area - a.area)[0]
-            let longest = s.restBoards.sort((a, b) => b.longestSide - a.longestSide)[0]
-            s.score =
-                s.restBoards.length * -1 +
-                biggest.area * 10 +
-                longest.longestSide +
-                s.fittedBoards.reduce((acc, curr) => acc - (curr.rotated ? 1 : 0), 0) +
-                s.nonFittedBoards.reduce((acc, curr) => acc + curr.area * -10, 0)
+        this.objects.update(r => {
+            r.solutions = solutions
+            return r
         })
     }
 
@@ -145,9 +157,10 @@ export class Solver {
      *
      * @param solution
      * @param targetBoardId
+     * @param configuration
      * @private
      */
-    private partialSolve(solution: Solution, targetBoardId: number): Solution[] {
+    private partialSolve(solution: Solution, targetBoardId: number, configuration: SolverConfiguration): Solution[] {
         let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id === targetBoardId)
         let newNonFitted = [...solution.nonFittedBoards] //splice next line removes the board
         let targetBoard = newNonFitted.splice(targetBoardIdx, 1)[0] //works inplace, returns spliced
@@ -162,9 +175,7 @@ export class Solver {
             let rTargetBoard = targetBoard.copy()
             rTargetBoard.rotated = !rTargetBoard.rotated
 
-            let rotate = this.configuration.rotationAllowed && targetBoard.width !== targetBoard.height
-
-            logDebug("BaseBoard", baseBoard)
+            let rotate = configuration.rotationAllowed && targetBoard.width !== targetBoard.height
 
             targetBoard.x = baseBoard.x
             targetBoard.y = baseBoard.y
@@ -202,9 +213,9 @@ export class Solver {
                     baseSolution.copy().appendRestBoards(...rHeightWise).appendFittedBoards(rTargetBoard.copy())
                 )
 
-            logDebug("Calculated result", res)
             return res
         }).flat()
+
     }
 
     /**
@@ -218,14 +229,13 @@ export class Solver {
      * @private
      */
     private splitWidthFirst(baseBoard: Board, targetBoard: Board): Board[] {
-        let [tWidth, tHeight] = !targetBoard.rotated ? [targetBoard.width, targetBoard.height] : [targetBoard.height, targetBoard.width]
-        let newHeight = baseBoard.height - tHeight
-        let newWidth = baseBoard.width - tWidth
+        let newHeight = baseBoard.height - targetBoard.height
+        let newWidth = baseBoard.width - targetBoard.width
 
         if (newWidth < 0 || newHeight < 0)
             return null
 
-        let rightBoard = new Board(newWidth, tHeight)
+        let rightBoard = new Board(newWidth, targetBoard.height)
         rightBoard.rightOf(targetBoard)
 
         let lowerBoard = new Board(baseBoard.width, newHeight)
@@ -245,9 +255,8 @@ export class Solver {
      * @private
      */
     private splitHeightFirst(baseBoard: Board, targetBoard: Board): Board[] {
-        let [tWidth, tHeight] = !targetBoard.rotated ? [targetBoard.width, targetBoard.height] : [targetBoard.height, targetBoard.width]
-        let newHeight = baseBoard.height - tHeight
-        let newWidth = baseBoard.width - tWidth
+        let newHeight = baseBoard.height - targetBoard.height
+        let newWidth = baseBoard.width - targetBoard.width
 
         if (newWidth < 0 || newHeight < 0)
             return null
@@ -255,7 +264,7 @@ export class Solver {
         let rightBoard = new Board(newWidth, baseBoard.height)
         rightBoard.rightOf(targetBoard)
 
-        let lowerBoard = new Board(tWidth, newHeight)
+        let lowerBoard = new Board(targetBoard.width, newHeight)
         lowerBoard.belowOf(targetBoard)
 
         return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)

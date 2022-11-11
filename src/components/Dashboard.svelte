@@ -1,13 +1,16 @@
 <script lang="ts">
     import {boards} from "../stores/Boards";
-    import {Solver, SolverConfiguration} from "../modules/Solver";
-    import {logDebug} from "../modules/Extensions";
+    import {Solver, SolverResult} from "../stores/Solver";
 
     let _boards
 
     let colors = []
     let solver = null
-    let solutionIdx: number= 0
+    let solverResult: SolverResult = null
+    let finishedNumber: number = 0
+
+
+    let solutionIdx: number = 0
 
     let previousAllowed = false
     let nextAllowed = false
@@ -23,30 +26,52 @@
                     + Math.round(Math.random() * 255) + ')'
                 )
 
-        logDebug(_boards.targetBoards.length, ..._boards.targetBoards)
-        solver = new Solver(_boards.baseBoard, _boards.targetBoards, new SolverConfiguration(false))
+        if(solver) {
+            solver.stop()
+        }
 
-        if(solver.solutions.length > 0 )
-            nextAllowed = true
+        solver = new Solver()
+        solver.subscribe(r => {
+            if(!r)
+                return
+
+            solverResult = r
+            if (r.solutions.length > 0)
+                nextAllowed = true
+            else {
+                previousAllowed = false
+                nextAllowed = false
+            }
+
+            finishedNumber = r.finishedSolutions.length
+
+            checkPrevNext()
+        })
+
+        solver.startSolver(_boards.baseBoard, _boards.targetBoards)
     })
 
+
     function nextSolution() {
-        if(++solutionIdx > solver.solutions.length - 1)
-            solutionIdx = solver.solutions.length - 1
+        if (++solutionIdx > solverResult.solutions.length - 1)
+            solutionIdx = solverResult.solutions.length - 1
 
         checkPrevNext()
     }
 
     function prevSolution() {
-        if(--solutionIdx < 0)
+        if (--solutionIdx < 0)
             solutionIdx = 0
 
         checkPrevNext()
     }
 
     function checkPrevNext() {
+        if(solutionIdx > solverResult.solutions.length - 1)
+            solutionIdx = solverResult.solutions.length - 1
+
         previousAllowed = (solutionIdx > 0)
-        nextAllowed = (solutionIdx < solver.solutions.length - 1)
+        nextAllowed = (solutionIdx < solverResult.solutions.length - 1)
     }
 </script>
 
@@ -59,10 +84,13 @@
     </div>
 </div>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Solution {solutionIdx + 1}</h1>
+    <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult.solutions[solutionIdx].score})</h1>
+    <small>Finding solutions ({solverResult.solutions.length - finishedNumber} partial, {finishedNumber} finished)</small>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary {(!previousAllowed) ? "disabled" : ""}" on:click={() => prevSolution()}>Previous</button>
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary {(!previousAllowed) ? "disabled" : ""}" on:click={() => prevSolution()}>Previous
+            </button>
             <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -73,7 +101,9 @@
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary {(!nextAllowed) ? "disabled" : ""}" on:click={() => nextSolution()}>Next</button>
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary {(!nextAllowed) ? "disabled" : ""}" on:click={() => nextSolution()}>Next
+            </button>
         </div>
     </div>
 </div>
@@ -81,16 +111,21 @@
 <svg viewBox="0 0 {_boards.baseBoard.width} {_boards.baseBoard.height}">
     <rect x="0" y="0" width="{_boards.baseBoard.width}" height="{_boards.baseBoard.height}" fill="none" stroke="black"
           stroke-width="2"></rect>
-    {#each solver.solutions[solutionIdx].fittedBoards as board, i}
-            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="none"
+    {#if solverResult.finishedSolutions.length > 0 }
+        {#each solverResult.finishedSolutions[solutionIdx].fittedBoards as board, i}
+            <g>
+                <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="none"
+                      stroke="{colors[i]}"
+                      stroke-width="1"></rect>
+                <text x="{board.x + board.width / 3}" y="{board.y +board.height /3}" font-size="10vh">{board.groupId}{board.rotated ? " (r)" : ""}</text>
+            </g>
+        {/each}
+        {#each solverResult.finishedSolutions[solutionIdx].restBoards as board, i}
+            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
                   stroke="{colors[i]}"
                   stroke-width="1"></rect>
-    {/each}
-    {#each solver.solutions[solutionIdx].restBoards as board, i}
-        <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
-              stroke="{colors[i]}"
-              stroke-width="1"></rect>
-    {/each}
+        {/each}
+    {/if}
 </svg>
 
 <h2>Section title</h2>

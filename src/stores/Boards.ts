@@ -45,6 +45,10 @@ class Boards extends BaseObjectStore<StoredBoards> {
             v.targetBoards.push(
                 new Board(width, height, this.nextId(v.targetBoards))
             );
+            v.targetBoards = v.targetBoards.map ((b, idx) => {
+                b.groupId = idx + 1
+                return b
+            })
             return v
         })
     }

@@ -10,10 +10,9 @@ export class Board {
     public rotated: Boolean = false
     public groupId: number = groupId++
 
-
     constructor(
-        public width: number = null,
-        public height: number = null,
+        private _width: number = null,
+        private _height: number = null,
         public id: number = globalId++
     ) {
         this.amount = 1
@@ -37,12 +36,31 @@ export class Board {
         return "Board " + (this.id)
     }
 
+    get width(): number {
+        return this.rotated ? this._height : this._width
+    }
+    get height(): number {
+        return this.rotated ? this._width : this._height
+    }
+    set width(value: number) {
+        if(this.rotated)
+            this._height = value
+        else
+            this._width = value
+    }
+    set height(value: number) {
+        if(this.rotated)
+            this._width = value
+        else
+            this._height = value
+    }
+
     get area(): number {
-        return this.width * this.height
+        return this._width * this._height
     }
 
     get longestSide(): number {
-        return (this.width > this.height) ? this.width : this.height
+        return (this._width > this._height) ? this._width : this._height
     }
 
     get shortName(): string {
@@ -50,7 +68,7 @@ export class Board {
     }
 
     get dimensions(): string {
-        return this.width + " X " + this.height
+        return this._width + " X " + this._height
     }
 
     /***
@@ -58,7 +76,7 @@ export class Board {
      * @param other
      */
     rightOf(other: Board) {
-        this.x = other.x + (other.rotated ? other.height : other.width)
+        this.x = other.x + other.width
         this.y = other.y
     }
 
@@ -69,6 +87,6 @@ export class Board {
      */
     belowOf(other: Board) {
         this.x = other.x
-        this.y = other.y + (other.rotated ? other.width : other.height)
+        this.y = other.y + other.height
     }
 }
