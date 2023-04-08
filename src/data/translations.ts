@@ -5,10 +5,10 @@ export default {
         "homepage.time": "The current time is: {{time}}",
         "error.missing_dimension": "Missing the second dimension in input"
     },
-    de: {
-        "homepage.title": "¡Hola Mundo!",
-        "homepage.welcome": "Hola, <strong>{{name}}</strong>, ¿cómo estás?",
-        "homepage.time": "La hora actual es: {{time}}",
-        "error.missing_dimension": "Zweite Dimension fehlt"
+    es: {
+      "homepage.title": "¡Hola Mundo!",
+      "homepage.welcome": "Hola, <strong>{{name}}</strong>, ¿cómo estás?",
+      "homepage.time": "La hora actual es: {{time}}",
+      "error.missing_dimension": "Zweite Dimension fehlt"
     },
 };

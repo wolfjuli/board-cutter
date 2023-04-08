@@ -8,6 +8,7 @@
     let solver = null
     let solverResult: SolverResult = null
     let finishedNumber: number = 0
+    let partialNumber: number = 0
 
 
     let solutionIdx: number = 0
@@ -44,6 +45,7 @@
             }
 
             finishedNumber = r.finishedSolutions.length
+            partialNumber = r.solutions.length - finishedNumber
 
             checkPrevNext()
         })
@@ -84,8 +86,8 @@
     </div>
 </div>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult.solutions[solutionIdx].score})</h1>
-    <small>Finding solutions ({solverResult.solutions.length - finishedNumber} partial, {finishedNumber} finished)</small>
+    <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult ? solverResult.solutions[solutionIdx].score : 0})</h1>
+    <small>Finding solutions ({partialNumber} partial, {finishedNumber} finished)</small>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <button type="button"
@@ -111,19 +113,19 @@
 <svg viewBox="0 0 {_boards.baseBoard.width} {_boards.baseBoard.height}">
     <rect x="0" y="0" width="{_boards.baseBoard.width}" height="{_boards.baseBoard.height}" fill="none" stroke="black"
           stroke-width="2"></rect>
-    {#if solverResult.finishedSolutions.length > 0 }
+    {#if solverResult && solverResult.finishedSolutions.length > 0 }
+        {#each solverResult.finishedSolutions[solutionIdx].restBoards as board, i}
+            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
+                  stroke="{colors[i]}"
+                  stroke-width="1"></rect>
+        {/each}
         {#each solverResult.finishedSolutions[solutionIdx].fittedBoards as board, i}
             <g>
                 <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="none"
                       stroke="{colors[i]}"
                       stroke-width="1"></rect>
-                <text x="{board.x + board.width / 3}" y="{board.y +board.height /3}" font-size="10vh">{board.groupId}{board.rotated ? " (r)" : ""}</text>
+                <text x="{board.x + board.width / 3}" y="{board.y +board.height / 3}" font-size="10vh">{board.dimensions}{board.rotated ? " (r)" : ""}</text>
             </g>
-        {/each}
-        {#each solverResult.finishedSolutions[solutionIdx].restBoards as board, i}
-            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
-                  stroke="{colors[i]}"
-                  stroke-width="1"></rect>
         {/each}
     {/if}
 </svg>
