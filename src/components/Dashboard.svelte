@@ -1,11 +1,13 @@
 <script lang="ts">
     import {boards} from "../stores/Boards";
-    import {Solver, SolverResult} from "../stores/Solver";
+    import {Solver, SolverConfiguration, SolverResult} from "../stores/Solver";
 
     let _boards
 
     let colors = []
     let solver: Solver = null
+    let solverConfiguration = new SolverConfiguration()
+    let inpBladeWidth = solverConfiguration.bladeWidth
     let solverPaused: boolean = false;
     let solverResult: SolverResult = null
     let finishedNumber: number = 0
@@ -53,7 +55,7 @@
 
         solver.paused.subscribe(v => solverPaused = v);
 
-        solver.startSolver(_boards.baseBoard, _boards.targetBoards)
+        solver.startSolver(_boards.baseBoard, _boards.targetBoards, solverConfiguration)
     })
 
 
@@ -85,6 +87,11 @@
 
     function pauseSolver() {
         solver.pauseSolving()
+    }
+
+    function restartSolver() {
+        solverConfiguration.bladeWidth = +inpBladeWidth
+        solver.startSolver(_boards.baseBoard, _boards.targetBoards, solverConfiguration)
     }
 </script>
 
@@ -152,6 +159,32 @@
     {/if}
 </svg>
 
+<h2>Settings</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+        <tr>
+            <th scope="col">Key</th>
+            <th scope="col">Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Blade Width</td>
+            <td><input bind:value={inpBladeWidth} type="text"/></td>
+        </tr>
+        <tr>
+            <td>Rotation allowed</td>
+            <td><input bind:checked={solverConfiguration.rotationAllowed} type="checkbox"/></td>
+        </tr>
+        <tr>
+            <td>
+                <button on:click={()=>restartSolver()}>Apply</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
 <!--
 <h2>Section title</h2>
 <div class="table-responsive">
