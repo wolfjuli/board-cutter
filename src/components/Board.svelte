@@ -20,7 +20,7 @@
 <div class="board input-group mb-3" >
 
     <div class="title input-group-text">{board.shortName}</div>
-    <div class="dimensions input-group-sm input-group-text form-control">{board.dimensions}</div>
+    <div class="dimensions input-group-sm input-group-text form-control"><small>{board.dimensions}</small></div>
     <button class="input-group-sm input-group-append"  on:click={() => less()}>-</button>
     <div class="amount input-group-sm input-group-text">{board.amount}</div>
     <button class="input-group-sm input-group-append" on:click={() => more()}>+</button>

@@ -45,7 +45,8 @@ export class SolverResult {
 export class Solver extends BaseVolatileStore<SolverResult> {
 
   public worker: NodeJS.Timer = null
-
+  public paused: Boolean = false
+  private configuration: SolverConfiguration = null
 
   public startSolver(
     baseBoard: Board,
@@ -53,6 +54,7 @@ export class Solver extends BaseVolatileStore<SolverResult> {
     configuration: SolverConfiguration = new SolverConfiguration(),
     scorer: Scorer = new BaseScorer()) {
 
+    this.configuration = configuration
 
     if (targetBoards.length > 0) {
       let allTargetBoards: Board[] = targetBoards.map(b => {
@@ -70,18 +72,35 @@ export class Solver extends BaseVolatileStore<SolverResult> {
 
       logDebug("Start solving")
 
-      this.worker = setInterval(() => {
-        if (this.solveOne()) {
-          clearInterval(this.worker)
-          this.worker = null
-
-          logDebug("Finished solving")
+      this.objects.subscribe(v => {
+        if (v.solutions.length > 1 && v.solutions.length % 1000 === 0) {
+          this.pauseSolving()
         }
+      })
 
-      }, configuration.intervalMs)
-    } else
-      logDebug("targetBoards is empty")
+      this.resumeSolving()
+    }
+  }
 
+  public pauseSolving() {
+    if (this.worker) {
+      clearInterval(this.worker)
+      this.worker = null
+      this.paused = true
+    }
+  }
+
+  public resumeSolving() {
+    this.worker = setInterval(() => {
+      if (this.solveOne()) {
+        clearInterval(this.worker)
+        this.worker = null
+
+        logDebug("Finished solving")
+      }
+    }, this.configuration.intervalMs)
+
+    this.paused = false;
   }
 
   public stop() {
@@ -130,7 +149,10 @@ export class Solver extends BaseVolatileStore<SolverResult> {
    * @param configuration
    * @private
    */
-  private partialSolve(solution: Solution, targetBoardId: number, configuration: SolverConfiguration): Solution[] {
+  private partialSolve(solution: Solution,
+                       targetBoardId: number,
+                       configuration: SolverConfiguration
+  ): Solution[] {
     let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id === targetBoardId)
     let newNonFitted = [...solution.nonFittedBoards] //splice next line removes the board
     let baseTargetBoard = newNonFitted.splice(targetBoardIdx, 1)[0] //works inplace, returns spliced
@@ -186,7 +208,6 @@ export class Solver extends BaseVolatileStore<SolverResult> {
 
       return res
     }).flat()
-
   }
 
   /**
@@ -199,7 +220,9 @@ export class Solver extends BaseVolatileStore<SolverResult> {
    * @param targetBoard The targetBoard, which defines the cut height
    * @private
    */
-  private splitWidthFirst(baseBoard: Board, targetBoard: Board): Board[] {
+  private splitWidthFirst(baseBoard: Board,
+                          targetBoard: Board
+  ): Board[] {
     let newHeight = baseBoard.height - targetBoard.height
     let newWidth = baseBoard.width - targetBoard.width
 
@@ -225,7 +248,9 @@ export class Solver extends BaseVolatileStore<SolverResult> {
    * @param targetBoard The targetBoard, which defines the cut width
    * @private
    */
-  private splitHeightFirst(baseBoard: Board, targetBoard: Board): Board[] {
+  private splitHeightFirst(baseBoard: Board,
+                           targetBoard: Board
+  ): Board[] {
     let newHeight = baseBoard.height - targetBoard.height
     let newWidth = baseBoard.width - targetBoard.width
 
@@ -240,5 +265,4 @@ export class Solver extends BaseVolatileStore<SolverResult> {
 
     return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)
   }
-
 }
