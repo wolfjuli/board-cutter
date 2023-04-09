@@ -14,12 +14,12 @@ export class Solution {
   }
 
   appendFittedBoards(...board: Board[]): Solution {
-    this.fittedBoards.push(...board)
+    this.fittedBoards = [...this.fittedBoards, ...board].sort((a, b) => a.area - b.area)
     return this
   }
 
   appendRestBoards(...board: Board[]): Solution {
-    this.restBoards.push(...board)
+    this.restBoards = [...this.restBoards, ...board].sort((a, b) => a.area - b.area)
     return this
   }
 

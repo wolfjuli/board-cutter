@@ -26,10 +26,8 @@ export class BaseScorer implements Scorer{
             let biggest = s.restBoards.sort((a, b) => b.area - a.area)[0]
             let longest = s.restBoards.sort((a, b) => b.longestSide - a.longestSide)[0]
             s.score =
-              +s.finished * 10000 +
-              s.restBoards.length * -1 +
-              biggest.area +
-              longest.longestSide +
+              s.restBoards.length * -10000 +
+              s.restBoards.reduce((acc, r) => acc + r.area, 0) +
               s.fittedBoards.reduce((acc, curr) => acc - (curr.rotated ? 1 : 0), 0) +
               s.nonFittedBoards.reduce((acc, curr) => acc + curr.area * -100, 0)
         })

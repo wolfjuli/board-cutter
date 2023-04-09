@@ -49,14 +49,15 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   public worker: NodeJS.Timer = null
   public paused: Writable<boolean> = writable(false)
   private configuration: SolverConfiguration = null
+  private scorer: Scorer = null
 
   public startSolver(
     baseBoard: Board,
     targetBoards: Board[],
     configuration: SolverConfiguration = new SolverConfiguration(),
     scorer: Scorer = new BaseScorer()) {
-
     this.configuration = configuration
+    this.scorer = scorer
 
     if (targetBoards.length > 0) {
       let allTargetBoards: Board[] = targetBoards.map(b => {
@@ -74,11 +75,6 @@ export class Solver extends BaseVolatileStore<SolverResult> {
 
       logDebug("Start solving")
 
-      this.objects.subscribe(v => {
-        if (v.solutions.length > 1 && v.solutions.length % 1000 === 0) {
-          this.pauseSolving()
-        }
-      })
 
       this.resumeSolving()
     }
@@ -122,7 +118,7 @@ export class Solver extends BaseVolatileStore<SolverResult> {
     this.objects.subscribe(v => solverResult = v)
     let solutions = [...solverResult.solutions]
 
-    let solutionIdx = solutions.findIndex((s) => !s.finished)
+    let solutionIdx = solutions.reverse().findIndex((s) => !s.finished)
 
     if (solutionIdx == -1)
       return true
@@ -130,21 +126,28 @@ export class Solver extends BaseVolatileStore<SolverResult> {
     let solution = solutions.splice(solutionIdx, 1)[0]
 
     let newSolutions = solution.nonFittedBoards.map((b) => {
-      return this.partialSolve(solution, b.id, solverResult.configuration)
+      return this.breadthFirst(solution, b.id, solverResult.configuration)
     }).flat()
+
+    let oldFinished = solutions.filter(s => s.finished).length
 
     if (newSolutions.length == 0) {
       solution.finished = true
       newSolutions = [solution]
     }
+    let newFinished = oldFinished + newSolutions.filter(s => s.finished).length
+
+    if (oldFinished % 1000 > newFinished % 1000)
+      this.pauseSolving()
 
     solutions = solverResult.scorer.scoreAndSort([
       ...solutions,
       ...newSolutions
     ])
 
+
     this.objects.update(r => {
-      r.solutions = solutions
+      r.solutions = this.distinct(solutions)
       return r
     })
   }
@@ -157,21 +160,25 @@ export class Solver extends BaseVolatileStore<SolverResult> {
    * @param configuration
    * @private
    */
-  private partialSolve(solution: Solution,
+  private breadthFirst(solution: Solution,
                        targetBoardId: number,
                        configuration: SolverConfiguration
-  ): Solution[] {
-    let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id === targetBoardId)
+  ): Solution {
     let newNonFitted = [...solution.nonFittedBoards] //splice next line removes the board
+    let targetBoardIdx = solution.nonFittedBoards.findIndex(b => b.id === targetBoardId)
     let baseTargetBoard = newNonFitted.splice(targetBoardIdx, 1)[0] //works inplace, returns spliced
     // newNonFitted.forEach(b => b.rotated = false)
 
     if (baseTargetBoard == undefined) {
-      logError("Target Board " + targetBoardId + ' has not been found in nonFittedBoards')
-      return []
+      logError('Target Board ' + targetBoardId + ' has not been found in nonFittedBoards')
+      return null
     }
 
-    return solution.restBoards.map((baseBoard, baseBoardIdx) => {
+    if (!solution.restBoards.length)
+      return null
+
+    let res: Solution[] = []
+    solution.restBoards.forEach((baseBoard, baseBoardIdx) => {
       let targetBoard = baseTargetBoard.copy()
       targetBoard.x = baseBoard.x
       targetBoard.y = baseBoard.y
@@ -186,7 +193,6 @@ export class Solver extends BaseVolatileStore<SolverResult> {
       let rWidthWise = rotate ? this.splitWidthFirst(baseBoard, rTargetBoard) : null
       let rHeightWise = rotate ? this.splitHeightFirst(baseBoard, rTargetBoard) : null
 
-      let res: Solution[] = []
       let newRest = [...solution.restBoards]
       newRest.splice(baseBoardIdx, 1)
       let baseSolution = new Solution(
@@ -200,7 +206,6 @@ export class Solver extends BaseVolatileStore<SolverResult> {
         res.push(
           baseSolution.copy().appendRestBoards(...widthWise).appendFittedBoards(targetBoard.copy())
         )
-
       if (heightWise != null)
         res.push(
           baseSolution.copy().appendRestBoards(...heightWise).appendFittedBoards(targetBoard.copy())
@@ -213,9 +218,9 @@ export class Solver extends BaseVolatileStore<SolverResult> {
         res.push(
           baseSolution.copy().appendRestBoards(...rHeightWise).appendFittedBoards(rTargetBoard.copy())
         )
+    })
 
-      return res
-    }).flat()
+    return this.scorer.scoreAndSort(res)[0]
   }
 
   /**
@@ -231,16 +236,16 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   private splitWidthFirst(baseBoard: Board,
                           targetBoard: Board
   ): Board[] {
-    let newHeight = baseBoard.height - targetBoard.height - this.configuration.bladeWidth
-    let newWidth = baseBoard.width - targetBoard.width - this.configuration.bladeWidth
+    let newHeight = baseBoard.height - targetBoard.height
+    let newWidth = baseBoard.width - targetBoard.width
 
     if (newWidth < 0 || newHeight < 0)
       return null
 
-    let rightBoard = new Board(newWidth, targetBoard.height)
+    let rightBoard = new Board(newWidth - this.configuration.bladeWidth, targetBoard.height)
     rightBoard.rightOf(targetBoard, this.configuration.bladeWidth)
 
-    let lowerBoard = new Board(baseBoard.width, newHeight)
+    let lowerBoard = new Board(baseBoard.width, newHeight - this.configuration.bladeWidth)
     lowerBoard.belowOf(targetBoard, this.configuration.bladeWidth)
 
     return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)
@@ -259,16 +264,16 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   private splitHeightFirst(baseBoard: Board,
                            targetBoard: Board
   ): Board[] {
-    let newHeight = baseBoard.height - targetBoard.height - this.configuration.bladeWidth
-    let newWidth = baseBoard.width - targetBoard.width - this.configuration.bladeWidth
+    let newHeight = baseBoard.height - targetBoard.height
+    let newWidth = baseBoard.width - targetBoard.width
 
     if (newWidth < 0 || newHeight < 0)
       return null
 
-    let rightBoard = new Board(newWidth, baseBoard.height)
+    let rightBoard = new Board(newWidth - this.configuration.bladeWidth, baseBoard.height)
     rightBoard.rightOf(targetBoard, this.configuration.bladeWidth)
 
-    let lowerBoard = new Board(targetBoard.width, newHeight)
+    let lowerBoard = new Board(targetBoard.width, newHeight - this.configuration.bladeWidth)
     lowerBoard.belowOf(targetBoard, this.configuration.bladeWidth)
 
     return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)

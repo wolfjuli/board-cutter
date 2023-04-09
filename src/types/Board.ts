@@ -104,4 +104,11 @@ export class Board {
     this.x = reference.x
     this.y = reference.y + reference.height + bladeWidth
   }
+
+  similar(other: Board): boolean {
+    return this.x == other.x &&
+      this.y == other.y &&
+      this.width == other.width &&
+      this.height == other.height
+  }
 }
