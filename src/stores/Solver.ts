@@ -10,6 +10,7 @@ export class SolverConfiguration {
   constructor(
     public rotationAllowed: Boolean = true,
     public intervalMs: number = 10,
+    public bladeWidth: number = 4
   ) {
 
   }
@@ -230,17 +231,17 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   private splitWidthFirst(baseBoard: Board,
                           targetBoard: Board
   ): Board[] {
-    let newHeight = baseBoard.height - targetBoard.height
-    let newWidth = baseBoard.width - targetBoard.width
+    let newHeight = baseBoard.height - targetBoard.height - this.configuration.bladeWidth
+    let newWidth = baseBoard.width - targetBoard.width - this.configuration.bladeWidth
 
     if (newWidth < 0 || newHeight < 0)
       return null
 
     let rightBoard = new Board(newWidth, targetBoard.height)
-    rightBoard.rightOf(targetBoard)
+    rightBoard.rightOf(targetBoard, this.configuration.bladeWidth)
 
     let lowerBoard = new Board(baseBoard.width, newHeight)
-    lowerBoard.belowOf(targetBoard)
+    lowerBoard.belowOf(targetBoard, this.configuration.bladeWidth)
 
     return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)
   }
@@ -258,17 +259,17 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   private splitHeightFirst(baseBoard: Board,
                            targetBoard: Board
   ): Board[] {
-    let newHeight = baseBoard.height - targetBoard.height
-    let newWidth = baseBoard.width - targetBoard.width
+    let newHeight = baseBoard.height - targetBoard.height - this.configuration.bladeWidth
+    let newWidth = baseBoard.width - targetBoard.width - this.configuration.bladeWidth
 
     if (newWidth < 0 || newHeight < 0)
       return null
 
     let rightBoard = new Board(newWidth, baseBoard.height)
-    rightBoard.rightOf(targetBoard)
+    rightBoard.rightOf(targetBoard, this.configuration.bladeWidth)
 
     let lowerBoard = new Board(targetBoard.width, newHeight)
-    lowerBoard.belowOf(targetBoard)
+    lowerBoard.belowOf(targetBoard, this.configuration.bladeWidth)
 
     return [rightBoard, lowerBoard].filter(b => b.width > 0 && b.height > 0)
   }

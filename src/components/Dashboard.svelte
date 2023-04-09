@@ -115,9 +115,11 @@
 
 
 
+
             </button>
             <button type="button"
                     class="btn btn-sm btn-outline-secondary {(!nextAllowed) ? "disabled" : ""}" on:click={() => nextSolution()}>Next
+
 
 
             </button>
@@ -125,26 +127,26 @@
     </div>
 </div>
 
-<svg viewBox="0 0 {_boards.baseBoard.width} {_boards.baseBoard.height}">
-    <rect x="0" y="0" width="{_boards.baseBoard.width}" height="{_boards.baseBoard.height}" fill="none" stroke="black"
+<svg viewBox="-1 -1 {_boards.baseBoard.width + 2} {_boards.baseBoard.height + 2}">
+    <rect fill="rgba(255,200,200,1)" height="{_boards.baseBoard.height + 2}" stroke="black" width="{_boards.baseBoard.width + 2}"
+          x="-1" y="-1"
           stroke-width="2"></rect>
     {#if solverResult && solverResult.finishedSolutions.length > 0 }
         {#each solverResult.finishedSolutions[solutionIdx].restBoards as board, i}
-            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="rgba(0,0,0,0.1)"
-                  stroke="{colors[i]}"
-                  stroke-width="1"></rect>
-            <text x="{board.x + board.width / 3}" y="{board.y +board.height / 3 + 20}"
-                  font-size="20px">{board.dimensions}</text>
+            <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}"
+                  fill="rgba(200,200,200,1)"></rect>
+            <text x="{board.x + board.width / 8}" y="{board.y +board.height / 8 + 20}"
+                  font-size={Math.min(board.height/8, board.width / 8)}>{board.dimensions}</text>
         {/each}
         {#each solverResult.finishedSolutions[solutionIdx].fittedBoards as board, i}
             <g>
-                <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="none"
+                <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="white"
                       stroke="{colors[i]}"
                       stroke-width="1"></rect>
                 <text x="{board.x + board.width / 3}" y="{board.y +board.height / 3 }"
-                      font-size="30px">{board.groupId}{board.rotated ? " (r)" : ""}</text>
-                <text x="{board.x + board.width / 3}" y="{board.y +board.height / 3 + 20}"
-                      font-size="20px">{board.dimensions}</text>
+                      font-size={Math.min(board.height/6, board.width / 6)}>{board.groupId}{board.rotated ? " (r)" : ""}</text>
+                <text x="{board.x + board.width / 3}" y="{board.y +board.height / 3 + board.height/8}"
+                      font-size={Math.min(board.height/8, board.width / 8)}>{board.dimensions}</text>
             </g>
         {/each}
     {/if}

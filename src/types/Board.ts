@@ -86,20 +86,22 @@ export class Board {
 
   /***
    * Puts the current board right of the given board, on the same y-axis
-   * @param other
+   * @param reference The reference board
+   * @param bladeWidth width of the blade (a.k.a. offset to be considered)
    */
-  rightOf(other: Board) {
-    this.x = other.x + other.width
-    this.y = other.y
+  rightOf(reference: Board, bladeWidth: number = 0) {
+    this.x = reference.x + reference.width + bladeWidth
+    this.y = reference.y
   }
 
 
   /***
    * Puts the current board on top of the given board, on the same x-axis
-   * @param other
+   * @param reference The reference board
+   * @param bladeWidth width of the blade (a.k.a. offset to be considered)
    */
-  belowOf(other: Board) {
-    this.x = other.x
-    this.y = other.y + other.height
+  belowOf(reference: Board, bladeWidth: number = 0) {
+    this.x = reference.x
+    this.y = reference.y + reference.height + bladeWidth
   }
 }
