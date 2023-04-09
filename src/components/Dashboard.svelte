@@ -6,6 +6,7 @@
 
     let colors = []
     let solver: Solver = null
+    let solverPaused: boolean = false;
     let solverResult: SolverResult = null
     let finishedNumber: number = 0
     let partialNumber: number = 0
@@ -14,6 +15,7 @@
 
     let previousAllowed = false
     let nextAllowed = false
+
 
     boards.subscribe(b => {
         _boards = b
@@ -27,7 +29,7 @@
                 )
 
         if (solver) {
-            solver.stop()
+            solver.cancel()
         }
 
         solver = new Solver()
@@ -48,6 +50,8 @@
 
             checkPrevNext()
         })
+
+        solver.paused.subscribe(v => solverPaused = v);
 
         solver.startSolver(_boards.baseBoard, _boards.targetBoards)
     })
@@ -78,6 +82,10 @@
     function resumeSolver() {
         solver.resumeSolving()
     }
+
+    function pauseSolver() {
+        solver.pauseSolving()
+    }
 </script>
 
 <div class="chartjs-size-monitor">
@@ -91,12 +99,14 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult ? solverResult.solutions[solutionIdx].score : 0}
         )</h1>
-    {#if (solver.paused)}
+    {#if (solverPaused)}
         <small>Paused solver (probably best solution already found) ({partialNumber} partial, {finishedNumber} finished)
             <button on:click={() => resumeSolver()}>Resume</button>
         </small>
     {:else }
-        <small>Finding solutions ({partialNumber} partial, {finishedNumber} finished)</small>
+        <small>Finding solutions ({partialNumber} partial, {finishedNumber} finished)
+            <button on:click={() => pauseSolver()}>Pause</button>
+        </small>
     {/if}
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">

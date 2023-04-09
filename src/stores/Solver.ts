@@ -3,12 +3,13 @@ import {Solution} from "../types/Solution";
 import {logDebug, logError} from "../modules/Extensions";
 import {BaseScorer, Scorer} from "../modules/Scorer";
 import {BaseVolatileStore} from "./BaseVolatileStore";
+import {writable, Writable} from "svelte/store";
 
 
 export class SolverConfiguration {
   constructor(
     public rotationAllowed: Boolean = true,
-    public intervalMs: number = 10
+    public intervalMs: number = 10,
   ) {
 
   }
@@ -45,7 +46,7 @@ export class SolverResult {
 export class Solver extends BaseVolatileStore<SolverResult> {
 
   public worker: NodeJS.Timer = null
-  public paused: Boolean = false
+  public paused: Writable<boolean> = writable(false)
   private configuration: SolverConfiguration = null
 
   public startSolver(
@@ -61,7 +62,7 @@ export class Solver extends BaseVolatileStore<SolverResult> {
         return Array.from({length: b.amount}, () => b.copy())
       }).flat()
 
-      this.stop()
+      this.cancel()
 
       this.objects.update(() => new SolverResult(
           [new Solution([], [baseBoard], allTargetBoards)],
@@ -83,14 +84,20 @@ export class Solver extends BaseVolatileStore<SolverResult> {
   }
 
   public pauseSolving() {
+    this.paused.set(true)
+
     if (this.worker) {
       clearInterval(this.worker)
       this.worker = null
-      this.paused = true
     }
   }
 
   public resumeSolving() {
+    this.paused.set(false)
+
+    if (this.worker)
+      return
+
     this.worker = setInterval(() => {
       if (this.solveOne()) {
         clearInterval(this.worker)
@@ -99,13 +106,13 @@ export class Solver extends BaseVolatileStore<SolverResult> {
         logDebug("Finished solving")
       }
     }, this.configuration.intervalMs)
-
-    this.paused = false;
   }
 
-  public stop() {
-    if (this.worker)
+  public cancel() {
+    if (this.worker) {
       clearInterval(this.worker)
+      this.worker = null
+    }
   }
 
   private solveOne(): Boolean {

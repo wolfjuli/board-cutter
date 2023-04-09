@@ -8,7 +8,7 @@ export class Board {
   public y: number = -1
   public groupId: number = groupId++
   protected childId: number = 0;
-  private _rotated: Boolean = false
+  private _rotated: boolean = false
 
   constructor(
     private _width: number = null,
@@ -55,6 +55,10 @@ export class Board {
 
   get dimensions(): string {
     return this._width + " X " + this._height
+  }
+
+  get rotated(): boolean {
+    return this._rotated
   }
 
   public copy(): Board {
