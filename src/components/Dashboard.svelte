@@ -1,16 +1,20 @@
 <script lang="ts">
     import {boards} from "../stores/Boards";
-    import {Solver, SolverConfiguration, SolverResult} from "../stores/Solver";
+    import {DepthSolver} from "../stores/solvers/DepthSolver";
+    import type {BaseSolver} from "../stores/solvers/BaseSolver";
+    import {SolverConfiguration} from "../types/SolverConfiguration";
+    import type {SolverResult} from "../types/SolverResult";
 
     let _boards
 
     let colors = []
-    let solver: Solver = null
+    let solver: BaseSolver = null
     let solverConfiguration = new SolverConfiguration()
     let inpBladeWidth = solverConfiguration.bladeWidth
     let solverPaused: boolean = false;
     let solverResult: SolverResult = null
     let finishedNumber: number = 0
+    let failedNumber: number = 0
     let partialNumber: number = 0
 
     let solutionIdx: number = 0
@@ -34,7 +38,7 @@
             solver.cancel()
         }
 
-        solver = new Solver()
+        solver = new DepthSolver(solverConfiguration)
         solver.subscribe(r => {
             if (!r)
                 return
@@ -49,13 +53,14 @@
 
             finishedNumber = r.finishedSolutions.length
             partialNumber = r.solutions.length - finishedNumber
+            failedNumber = r.finishedSolutions.filter(s => s.failed).length
 
             checkPrevNext()
         })
 
         solver.paused.subscribe(v => solverPaused = v);
 
-        solver.startSolver(_boards.baseBoard, _boards.targetBoards, solverConfiguration)
+        solver.startSolver(_boards.baseBoard, _boards.targetBoards)
     })
 
 
@@ -91,7 +96,7 @@
 
     function restartSolver() {
         solverConfiguration.bladeWidth = +inpBladeWidth
-        solver.startSolver(_boards.baseBoard, _boards.targetBoards, solverConfiguration)
+        solver.startSolver(_boards.baseBoard, _boards.targetBoards)
     }
 </script>
 
@@ -107,11 +112,12 @@
     <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult ? solverResult.solutions[solutionIdx].score : 0}
         )</h1>
     {#if (solverPaused)}
-        <small>Paused solver (probably best solution already found) ({partialNumber} partial, {finishedNumber} finished)
+        <small>Paused solver (probably best solution already found) ({partialNumber} partial, {finishedNumber}
+            finished, {failedNumber} of them failed)
             <button on:click={() => resumeSolver()}>Resume</button>
         </small>
     {:else }
-        <small>Finding solutions ({partialNumber} partial, {finishedNumber} finished)
+        <small>Finding solutions ({partialNumber} partial, {finishedNumber} finished, {failedNumber} of them failed)
             <button on:click={() => pauseSolver()}>Pause</button>
         </small>
     {/if}
@@ -119,33 +125,27 @@
         <div class="btn-group me-2">
             <button type="button"
                     class="btn btn-sm btn-outline-secondary {(!previousAllowed) ? "disabled" : ""} " on:click={() => prevSolution()}>Previous
-
-
-
-
             </button>
             <button type="button"
                     class="btn btn-sm btn-outline-secondary {(!nextAllowed) ? "disabled" : ""}" on:click={() => nextSolution()}>Next
-
-
-
             </button>
         </div>
     </div>
 </div>
 
 <svg viewBox="-1 -1 {_boards.baseBoard.width + 2} {_boards.baseBoard.height + 2}">
-    <rect fill="rgba(255,200,200,1)" height="{_boards.baseBoard.height + 2}" stroke="black" width="{_boards.baseBoard.width + 2}"
+    <rect fill="rgba(255,200,200,1)" height="{_boards.baseBoard.height + 2}" stroke="black"
+          width="{_boards.baseBoard.width + 2}"
           x="-1" y="-1"
           stroke-width="2"></rect>
-    {#if solverResult && solverResult.finishedSolutions.length > 0 }
-        {#each solverResult.finishedSolutions[solutionIdx].restBoards as board, i}
+    {#if solverResult && solverResult.solutions.length > 0 }
+        {#each solverResult.solutions[solutionIdx].restBoards as board, i}
             <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}"
                   fill="rgba(200,200,200,1)"></rect>
             <text x="{board.x + board.width / 8}" y="{board.y +board.height / 8 + 20}"
                   font-size={Math.min(board.height/8, board.width / 8)}>{board.dimensions}</text>
         {/each}
-        {#each solverResult.finishedSolutions[solutionIdx].fittedBoards as board, i}
+        {#each solverResult.solutions[solutionIdx].fittedBoards as board, i}
             <g>
                 <rect x="{board.x}" y="{board.y}" width="{board.width}" height="{board.height}" fill="white"
                       stroke="{colors[i]}"

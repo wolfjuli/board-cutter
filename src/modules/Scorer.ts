@@ -35,4 +35,5 @@ export class BaseScorer implements Scorer{
         return solutions.sort((a, b) => b.score - a.score)
     }
 
+
 }
