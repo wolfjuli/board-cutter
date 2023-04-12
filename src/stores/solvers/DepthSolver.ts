@@ -3,7 +3,6 @@ import {SolverConfiguration} from "../../types/SolverConfiguration";
 import {BaseScorer, Scorer} from "../../modules/Scorer";
 import type {Board} from "../../types/Board";
 import type {Solution} from "../../types/Solution";
-import {TreeNode} from "../../types/TreeNode";
 
 
 /**
@@ -19,7 +18,7 @@ import {TreeNode} from "../../types/TreeNode";
 export class DepthSolver extends BaseSolver {
 
 
-  private lastSolution: TreeNode<Solution>
+  private lastSolution: Solution
   private pause: boolean
 
   public constructor(
@@ -37,7 +36,7 @@ export class DepthSolver extends BaseSolver {
 
     this.objects.subscribe(r => {
       if (r)
-        this.lastSolution = new TreeNode(r.solutions[0])
+        this.lastSolution = r.solutions[0]
     })
   }
 
@@ -46,34 +45,28 @@ export class DepthSolver extends BaseSolver {
     let ret: Solution[] = []
     let done = false;
 
-    for (let i: number = 0; i < this.sleepAmount; i++) {
-      let next = this.nextSolution()
-      if (!next) {
-        return done
-      }
-
-      ret.push(next)
-    }
-
-    if (!ret.length) {
-      done = true
+    let next = this.nextSolution()
+    if (!next) {
       this.cancel()
+      return true
     }
 
     this.objects.update(result => {
-      result.solutions = this.scorer.scoreAndSort(this.distinct([...result.solutions, ...ret]))
+      result.solutions = this.scorer.scoreAndSort(this.distinct([...result.solutions, next]))
       return result
     })
 
     return done
   }
 
-  private nextSolution(current: TreeNode<Solution> = this.lastSolution): Solution {
-    let solution = current.payload
-    let allKeys = Object.keys(current.children)
-    if (current.payload.finished) {
-      if (current.parent)
-        return this.nextSolution(current.parent) //backtrack
+  private nextSolution(current: Solution = this.lastSolution): Solution {
+    if (!current)
+      return null
+
+    let solution = current
+    if (current.finished) {
+      if (current.parentSolution)
+        return this.nextSolution(current.parentSolution) //backtrack
       else
         return null
     }
@@ -84,13 +77,16 @@ export class DepthSolver extends BaseSolver {
           for (let rotated = 0; rotated < 1 + (+this.configuration.rotationAllowed); rotated++) {
             let key = this.calculateKey(baseTargetBoard, baseBoard, !!widthWise, !!rotated)
 
-            if (allKeys.find(k => k == key))
+            if (solution.children.find(k => k == key))
               continue
-
+            else
+              solution.children = [...solution.children, key]
 
             let targetBoard = baseTargetBoard.copy()
 
             if (rotated) targetBoard.rotate()
+            targetBoard.x = baseBoard.x
+            targetBoard.y = baseBoard.y
 
             let restBoards: Board[] = []
             if (widthWise)
@@ -98,33 +94,30 @@ export class DepthSolver extends BaseSolver {
             else
               restBoards = this.splitHeightFirst(baseBoard, targetBoard)
 
-
-            let newSolution = solution.copy().appendFittedBoards(targetBoard).removeNonFittedBoard(baseTargetBoard)
+            let newSolution = solution
+              .copy()
+              .appendFittedBoards(targetBoard)
+              .removeNonFittedBoard(baseTargetBoard)
+              .removeRestBoard(baseBoard)
             if (restBoards)
               newSolution.appendRestBoards(...restBoards)
 
             newSolution.finished = newSolution.failed = !restBoards
             newSolution.finished = newSolution.finished || !newSolution.nonFittedBoards.length
 
-            let newNode = new TreeNode(newSolution, this.lastSolution)
-            this.lastSolution.children[key] = newNode
-            this.lastSolution = newNode
+            this.lastSolution = newSolution
             return newSolution
           }
         }
       }
     }
+
+    // there was no available child to generate, backtrack
+    return this.nextSolution(current.parentSolution)
   }
 
   private calculateKey(targetBoard: Board, baseBoard: Board, widthWise: boolean, rotated: boolean) {
     return `${targetBoard.id}:${baseBoard.id}:${rotated ? "r" : ""}${widthWise ? "w" : "h"}`
   }
 
-  private possibleChildren(node: TreeNode<Solution>): number {
-    let solution = node.payload
-    if (solution.finished || solution.failed)
-      return 0
-
-    return solution.nonFittedBoards.length * solution.restBoards.length * 2 * (+this.configuration.rotationAllowed * 2)
-  }
 }

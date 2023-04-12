@@ -1,5 +1,5 @@
 import {BaseObjectStore} from "./BaseObjectStore";
-import {Solution} from "./solvers/BreadthSolver";
+import {Solution} from "../types/Solution";
 
 class Solutions extends BaseObjectStore<Solution[]> {
 

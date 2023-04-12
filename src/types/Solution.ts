@@ -5,6 +5,7 @@ export class Solution {
   public score: number = -1
   public finished: boolean = false
   public failed: boolean = false
+  public children: string[] = []
 
 
   constructor(
@@ -17,6 +18,11 @@ export class Solution {
 
   removeNonFittedBoard(board: Board): Solution {
     this.nonFittedBoards = this.nonFittedBoards.filter(b => b.id != board.id)
+    return this
+  }
+
+  removeRestBoard(board: Board): Solution {
+    this.restBoards = this.restBoards.filter(b => b.id != board.id)
     return this
   }
 
@@ -35,7 +41,7 @@ export class Solution {
       [...this.fittedBoards],
       [...this.restBoards],
       [...this.nonFittedBoards],
-      this.parentSolution
+      this
     )
   }
 

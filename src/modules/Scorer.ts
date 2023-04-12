@@ -1,12 +1,12 @@
 import type {Solution} from "../types/Solution";
 
 export interface Scorer {
-    scoreAndSort(solutions: Solution[]) : Solution[]
+  scoreAndSort(solutions: Solution[]): Solution[]
 }
 
-export class BaseScorer implements Scorer{
-    constructor() {
-    }
+export class BaseScorer implements Scorer {
+  constructor() {
+  }
 
   /***
    * FScores a solution:
@@ -20,20 +20,21 @@ export class BaseScorer implements Scorer{
    * @param solutions
    * @private
    */
-    scoreAndSort(solutions: Solution[]): Solution[] {
+  scoreAndSort(solutions: Solution[]): Solution[] {
 
-        solutions.forEach(s => {
-            let biggest = s.restBoards.sort((a, b) => b.area - a.area)[0]
-            let longest = s.restBoards.sort((a, b) => b.longestSide - a.longestSide)[0]
-            s.score =
-              s.restBoards.length * -10000 +
-              s.restBoards.reduce((acc, r) => acc + r.area, 0) +
-              s.fittedBoards.reduce((acc, curr) => acc - (curr.rotated ? 1 : 0), 0) +
-              s.nonFittedBoards.reduce((acc, curr) => acc + curr.area * -100, 0)
-        })
+    solutions.forEach(s => {
+      let biggest = s.restBoards.sort((a, b) => b.area - a.area)[0]
+      let longest = s.restBoards.sort((a, b) => b.longestSide - a.longestSide)[0]
+      s.score =
+        +s.failed * -10000000000 +
+        s.restBoards.length * -10000 +
+        s.restBoards.reduce((acc, r) => acc + r.area, 0) +
+        s.fittedBoards.reduce((acc, curr) => acc - (curr.rotated ? 1 : 0), 0) +
+        s.nonFittedBoards.reduce((acc, curr) => acc + curr.area * -100, 0)
+    })
 
-        return solutions.sort((a, b) => b.score - a.score)
-    }
+    return solutions.sort((a, b) => b.score - a.score)
+  }
 
 
 }

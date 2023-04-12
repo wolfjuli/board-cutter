@@ -109,7 +109,10 @@
     </div>
 </div>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Solution {solutionIdx + 1} (Score: {solverResult ? solverResult.solutions[solutionIdx].score : 0}
+    <h1 class="h2">Solution {solutionIdx + 1} (
+        Score: {solverResult ? solverResult.solutions[solutionIdx].score : 0}
+        {solverResult.solutions[solutionIdx].failed ? ", FAILED!" : ""}
+        {!solverResult.solutions[solutionIdx].finished ? ", Partial!" : ""}
         )</h1>
     {#if (solverPaused)}
         <small>Paused solver (probably best solution already found) ({partialNumber} partial, {finishedNumber}
