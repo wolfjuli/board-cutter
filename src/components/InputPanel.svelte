@@ -56,6 +56,42 @@
         errors.add(t(message_key, vars))
     }
 
+    let saveName = ""
+
+    function save() {
+        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({baseBoard, targetBoards}));
+        var dlAnchorElem = document.getElementById('downloadAnchorElem');
+        dlAnchorElem.setAttribute("href", dataStr);
+        dlAnchorElem.setAttribute("download", saveName + ".json");
+        dlAnchorElem.click();
+    }
+
+    let file = null
+
+    function onFileSelected(e) {
+        file = e.target.files[0]
+    }
+
+    function load() {
+        if (!file)
+            return
+
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = e => {
+            let json = JSON.parse(e.target.result.toString())
+
+            let baseBoard: Board = Object.assign(new Board(), json.baseBoard)
+            let targetBoards: Board[] = json.targetBoards.map(b => Object.assign(new Board(), b))
+
+            boards.setBase(baseBoard.width, baseBoard.height)
+            boards.clearAll()
+            targetBoards.forEach(b => {
+                boards.add(b.width, b.height, b.amount)
+            })
+        };
+    }
+
 </script>
 
 
@@ -108,5 +144,15 @@
 
         </ul>
     </div>
+
+    <div>
+        <input bind:value={saveName} type="text"/>
+        <button on:click={() => save()}> Save</button>
+    </div>
+    <div>
+        <input accept=".json" on:change={(e)=>onFileSelected(e)} type="file">
+        <button on:click={() => load()}> Load</button>
+    </div>
+    <a id="downloadAnchorElem" style="display:none"></a>
 </nav>
 
