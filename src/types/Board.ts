@@ -72,6 +72,10 @@ export class Board {
     return ret
   }
 
+  get isSquare(): boolean {
+    return this._width == this._height
+  }
+
   /**
    * Switches width and height and toggles the rotated state in-place
    */

@@ -23,7 +23,7 @@ export abstract class BaseSolver extends BaseVolatileStore<SolverResult> {
   public startSolver(
     baseBoard: Board,
     targetBoards: Board[],
-  ) {
+  ): SolverResult {
     if (targetBoards.length > 0) {
       let allTargetBoards: Board[] = targetBoards.map(b => {
         return Array.from({length: b.amount}, () => b.copy())
@@ -31,17 +31,19 @@ export abstract class BaseSolver extends BaseVolatileStore<SolverResult> {
 
       this.cancel()
 
-      this.objects.update(() => new SolverResult(
-          [new Solution([], [baseBoard], allTargetBoards)],
-          this.configuration,
-          this.scorer
-        )
+      let result = new SolverResult(
+        [new Solution([], [baseBoard], allTargetBoards)],
+        this.configuration,
+        this.scorer
       )
+
+      this.objects.update(() => result)
 
       logDebug("Start solving")
 
-
       this.resumeSolving()
+
+      return result
     }
   }
 

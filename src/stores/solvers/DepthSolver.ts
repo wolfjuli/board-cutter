@@ -3,6 +3,7 @@ import {SolverConfiguration} from "../../types/SolverConfiguration";
 import {BaseScorer, Scorer} from "../../modules/Scorer";
 import type {Board} from "../../types/Board";
 import type {Solution} from "../../types/Solution";
+import type {SolverResult} from "../../types/SolverResult";
 
 
 /**
@@ -30,14 +31,15 @@ export class DepthSolver extends BaseSolver {
     this.paused.subscribe(p => this.pause = p)
   }
 
-  override startSolver(baseBoard: Board, targetBoards: Board[]) {
-    super.startSolver(baseBoard, targetBoards);
+  override startSolver(baseBoard: Board, targetBoards: Board[]): SolverResult {
+    let res = super.startSolver(baseBoard, targetBoards);
 
+    if (res && res.solutions && res.solutions.length > 0)
+      this.lastSolution = res.solutions[0]
+    else
+      this.lastSolution = null
 
-    this.objects.subscribe(r => {
-      if (r)
-        this.lastSolution = r.solutions[0]
-    })
+    return res
   }
 
   override solveOne(): boolean {
@@ -74,7 +76,7 @@ export class DepthSolver extends BaseSolver {
     for (const baseTargetBoard of solution.nonFittedBoards) {
       for (const baseBoard of solution.restBoards) {
         for (let widthWise = 0; widthWise < 2; widthWise++) {
-          for (let rotated = 0; rotated < 1 + (+this.configuration.rotationAllowed); rotated++) {
+          for (let rotated = 0; rotated < 1 + (+this.configuration.rotationAllowed * +!baseTargetBoard.isSquare); rotated++) {
             let key = this.calculateKey(baseTargetBoard, baseBoard, !!widthWise, !!rotated)
 
             if (solution.children.find(k => k == key))
