@@ -84,8 +84,8 @@
             let baseBoard: Board = Object.assign(new Board(), json.baseBoard)
             let targetBoards: Board[] = json.targetBoards.map(b => Object.assign(new Board(), b))
 
-            boards.setBase(baseBoard.width, baseBoard.height)
             boards.clearAll()
+            boards.setBase(baseBoard.width, baseBoard.height)
             targetBoards.forEach(b => {
                 boards.add(b.width, b.height, b.amount)
             })
@@ -95,7 +95,7 @@
 </script>
 
 
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse" style="">
+<nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar sticky-top" id="sidebarMenu" style="">
     <div class="position-sticky pt-3 sidebar-sticky">
         <ul class="nav flex-column">
             <li class="nav-item">
