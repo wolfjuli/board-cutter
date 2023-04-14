@@ -74,9 +74,9 @@ export class DepthSolver extends BaseSolver {
     }
 
     for (const baseTargetBoard of solution.nonFittedBoards) {
-      for (const baseBoard of solution.restBoards) {
-        for (let widthWise = 0; widthWise < 2; widthWise++) {
-          for (let rotated = 0; rotated < 1 + (+this.configuration.rotationAllowed * +!baseTargetBoard.isSquare); rotated++) {
+      for (let rotated = 0; rotated < 1 + (+this.configuration.rotationAllowed * +!baseTargetBoard.isSquare); rotated++) {
+        for (const baseBoard of solution.restBoards) {
+          for (let widthWise = 0; widthWise < 2; widthWise++) {
             let key = this.calculateKey(baseTargetBoard, baseBoard, !!widthWise, !!rotated)
 
             if (solution.children.find(k => k == key))
